@@ -58,20 +58,23 @@ app.post("/generate", async (req, res) => {
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
     const form = pdfDoc.getForm();
 
-    form.getTextField("WorksiteName").setText(fmt(d.worksiteName));
-    form.getTextField("EEName").setText(fmt(d.employeeName));
-    form.getTextField("EEAddress").setText(fmt(d.employeeAddress1));
-    form.getTextField("EEAddress2").setText(fmt(d.employeeAddress2));
-    form.getTextField("SSN").setText(fmt(d.ssn));
-    form.getTextField("LDW").setText(fmt(d.lastDayWorked));
-    form.getTextField("DateOfTerm").setText(fmt(d.dateOfTermination));
-    form.getTextField("FINALINCIDENT").setText(fmt(d.finalIncident));
-    form.getTextField("REMARKS").setText(fmt(d.remarks));
+    // TEXT FIELDS
+    try { form.getTextField("WorksiteName").setText(fmt(d.worksiteName)); } catch (e) { console.log("Missing field: WorksiteName"); }
+    try { form.getTextField("EEName").setText(fmt(d.employeeName)); } catch (e) { console.log("Missing field: EEName"); }
+    try { form.getTextField("EEAddress").setText(fmt(d.employeeAddress1)); } catch (e) { console.log("Missing field: EEAddress"); }
+    try { form.getTextField("EEAddress2").setText(fmt(d.employeeAddress2)); } catch (e) { console.log("Missing field: EEAddress2"); }
+    try { form.getTextField("SSN").setText(fmt(d.ssn)); } catch (e) { console.log("Missing field: SSN"); }
+    try { form.getTextField("LDW").setText(fmt(d.lastDayWorked)); } catch (e) { console.log("Missing field: LDW"); }
+    try { form.getTextField("DateOfTerm").setText(fmt(d.dateOfTermination)); } catch (e) { console.log("Missing field: DateOfTerm"); }
+    try { form.getTextField("FINALINCIDENT").setText(fmt(d.finalIncident)); } catch (e) { console.log("Missing field: FINALINCIDENT"); }
+    try { form.getTextField("REMARKS").setText(fmt(d.remarks)); } catch (e) { console.log("Missing field: REMARKS"); }
 
-    form.getTextField("SupNamePrint").setText(fmt(d.supervisorName));
-    form.getTextField("SupSig").setText(fmt(d.supervisorSignature));
-    form.getTextField("SupDate").setText(fmt(d.supervisorDate));
+    // SUPERVISOR FIELDS
+    try { form.getTextField("SupNamePrint").setText(fmt(d.supervisorName)); } catch (e) { console.log("Missing field: SupNamePrint"); }
+    try { form.getTextField("SupSig").setText(fmt(d.supervisorSignature)); } catch (e) { console.log("Missing field: SupSig"); }
+    try { form.getTextField("SupDate").setText(fmt(d.supervisorDate)); } catch (e) { console.log("Missing field: SupDate"); }
 
+    // REASON CHECKBOXES
     const allReasons = [
       ...(d.voluntaryReasons || []),
       ...(d.involuntaryReasons || [])
@@ -88,40 +91,54 @@ app.post("/generate", async (req, res) => {
       }
     }
 
+    // MARK ALL THAT APPLY CHECKBOXES
     if (d.flags?.wagesInLieu) {
-      try { form.getCheckBox("wagesinlieuofnotice").check(); } catch {}
+      try { form.getCheckBox("wagesinlieuofnotice").check(); } catch (e) { console.log("Missing checkbox: wagesinlieuofnotice"); }
     }
+
     if (d.flags?.severanceOnFile) {
-      try { form.getCheckBox("severance").check(); } catch {}
+      try { form.getCheckBox("severance").check(); } catch (e) { console.log("Missing checkbox: severance"); }
     }
+
     if (d.flags?.severancePaid) {
-      try { form.getCheckBox("severancepd").check(); } catch {}
+      try { form.getCheckBox("severancepd").check(); } catch (e) { console.log("Missing checkbox: severancepd"); }
     }
+
     if (d.flags?.loaOnFile) {
-      try { form.getCheckBox("loa").check(); } catch {}
+      try { form.getCheckBox("loa").check(); } catch (e) { console.log("Missing checkbox: loa"); }
     }
+
     if (d.flags?.ptoPaid) {
-      try { form.getCheckBox("PTO").check(); } catch {}
+      try { form.getCheckBox("PTO").check(); } catch (e) { console.log("Missing checkbox: PTO"); }
     }
+
     if (d.flags?.incidentDocs) {
-      try { form.getCheckBox("incident").check(); } catch {}
+      try { form.getCheckBox("incident").check(); } catch (e) { console.log("Missing checkbox: incident"); }
     }
+
     if (d.flags?.sepWagesReported) {
-      try { form.getCheckBox("sepwages").check(); } catch {}
+      try { form.getCheckBox("sepwages").check(); } catch (e) { console.log("Missing checkbox: sepwages"); }
     }
 
-    try { form.getTextField("wagesinlieuofnotice_amount").setText(fmt(d.wagesAmount)); } catch {}
-    try { form.getTextField("severancepd_amount").setText(fmt(d.severanceAmount)); } catch {}
-    try { form.getTextField("PTO_days").setText(fmt(d.ptoDays)); } catch {}
-    try { form.getTextField("PTO_amount").setText(fmt(d.ptoAmount)); } catch {}
+    // IMPORTANT:
+    // Update field appearances so values stay visible in the saved PDF
+    form.updateFieldAppearances();
 
-    form.flatten();
+    // TEMPORARILY DISABLED:
+    // Flattening can make the PDF look blank if appearance streams are not preserved correctly
+    // form.flatten();
 
     const finalPdf = await pdfDoc.save();
-    const safeName = (d.employeeName || "Employee").replace(/[^\w\s-]/g, "").trim() || "Employee";
+
+    const safeName = (d.employeeName || "Employee")
+      .replace(/[^\w\s-]/g, "")
+      .trim() || "Employee";
 
     const formData = new FormData();
-    formData.append("content", `📄 Separation Notice generated for **${d.employeeName || "Employee"}**`);
+    formData.append(
+      "content",
+      `📄 Separation Notice generated for **${d.employeeName || "Employee"}**`
+    );
     formData.append("file", Buffer.from(finalPdf), {
       filename: `Separation Notice - ${safeName}.pdf`,
       contentType: "application/pdf"
