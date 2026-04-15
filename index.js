@@ -53,12 +53,13 @@ app.get("/", (req, res) => {
 app.post("/generate", async (req, res) => {
   try {
     const d = req.body;
+    console.log("Incoming payload:");
+    console.log(JSON.stringify(d, null, 2));
 
     const existingPdfBytes = fs.readFileSync("./template.pdf");
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
     const form = pdfDoc.getForm();
 
-    // TEXT FIELDS
     try { form.getTextField("WorksiteName").setText(fmt(d.worksiteName)); } catch (e) { console.log("Missing field: WorksiteName"); }
     try { form.getTextField("EEName").setText(fmt(d.employeeName)); } catch (e) { console.log("Missing field: EEName"); }
     try { form.getTextField("EEAddress").setText(fmt(d.employeeAddress1)); } catch (e) { console.log("Missing field: EEAddress"); }
@@ -69,12 +70,10 @@ app.post("/generate", async (req, res) => {
     try { form.getTextField("FINALINCIDENT").setText(fmt(d.finalIncident)); } catch (e) { console.log("Missing field: FINALINCIDENT"); }
     try { form.getTextField("REMARKS").setText(fmt(d.remarks)); } catch (e) { console.log("Missing field: REMARKS"); }
 
-    // SUPERVISOR FIELDS
     try { form.getTextField("SupNamePrint").setText(fmt(d.supervisorName)); } catch (e) { console.log("Missing field: SupNamePrint"); }
     try { form.getTextField("SupSig").setText(fmt(d.supervisorSignature)); } catch (e) { console.log("Missing field: SupSig"); }
     try { form.getTextField("SupDate").setText(fmt(d.supervisorDate)); } catch (e) { console.log("Missing field: SupDate"); }
 
-    // REASON CHECKBOXES
     const allReasons = [
       ...(d.voluntaryReasons || []),
       ...(d.involuntaryReasons || [])
@@ -91,7 +90,6 @@ app.post("/generate", async (req, res) => {
       }
     }
 
-    // MARK ALL THAT APPLY CHECKBOXES
     if (d.flags?.wagesInLieu) {
       try { form.getCheckBox("wagesinlieuofnotice").check(); } catch (e) { console.log("Missing checkbox: wagesinlieuofnotice"); }
     }
@@ -120,13 +118,7 @@ app.post("/generate", async (req, res) => {
       try { form.getCheckBox("sepwages").check(); } catch (e) { console.log("Missing checkbox: sepwages"); }
     }
 
-    // IMPORTANT:
-    // Update field appearances so values stay visible in the saved PDF
     form.updateFieldAppearances();
-
-    // TEMPORARILY DISABLED:
-    // Flattening can make the PDF look blank if appearance streams are not preserved correctly
-    // form.flatten();
 
     const finalPdf = await pdfDoc.save();
 
